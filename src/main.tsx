@@ -3,10 +3,6 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import 'aos/dist/aos.css';
-import { initializeDatabase } from './config/database';
-
-// Initialize database connection
-initializeDatabase().catch(console.error);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

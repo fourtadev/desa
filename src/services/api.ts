@@ -2,28 +2,6 @@ import {
   DesaSettings, News, Gallery, Event, Organization, Service, 
   ServiceSubmission, Document, Admin, ApiResponse, PaginatedResponse 
 } from '../types';
-import {
-  getDesaSettingsFromDB,
-  updateDesaSettingsInDB,
-  getNewsFromDB,
-  getNewsBySlugFromDB,
-  createNewsInDB,
-  updateNewsInDB,
-  deleteNewsFromDB,
-  getGalleriesFromDB,
-  createGalleryInDB,
-  getEventsFromDB,
-  createEventInDB,
-  getOrganizationFromDB,
-  createOrganizationInDB,
-  getServicesFromDB,
-  createServiceInDB,
-  createServiceSubmissionInDB,
-  getServiceSubmissionsFromDB,
-  loginFromDB,
-  createAdminInDB,
-  getStatisticsFromDB
-} from './databaseService';
 
 // API Base URL - should be configured based on environment
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -69,13 +47,6 @@ const apiRequest = async <T>(
 // Desa Settings Service
 export const getDesaSettings = async (): Promise<DesaSettings> => {
   try {
-    // Try to get from database first
-    const dbSettings = await getDesaSettingsFromDB();
-    
-    if (dbSettings) {
-      return dbSettings;
-    }
-    
     // Fallback to default settings if no data in database
     const defaultSettings: DesaSettings = {
       id: 1,
@@ -113,18 +84,10 @@ export const getDesaSettings = async (): Promise<DesaSettings> => {
 
 export const updateDesaSettings = async (settings: Partial<DesaSettings>): Promise<ApiResponse<DesaSettings>> => {
   try {
-    const success = await updateDesaSettingsInDB(settings);
-    
-    if (success) {
-      const updatedSettings = await getDesaSettingsFromDB();
-      return { 
-        success: true, 
-        data: updatedSettings || undefined,
-        message: 'Settings updated successfully' 
-      };
-    } else {
-      return { success: false, message: 'Failed to update settings' };
-    }
+    return await apiRequest<ApiResponse<DesaSettings>>('/desa-settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
   } catch (error) {
     console.error('Error updating desa settings:', error);
     return { success: false, message: 'Failed to update settings' };
@@ -134,15 +97,12 @@ export const updateDesaSettings = async (settings: Partial<DesaSettings>): Promi
 // News Service
 export const getNews = async (page: number = 1, limit: number = 10, status: string = 'published'): Promise<PaginatedResponse<News>> => {
   try {
-    const { data, total } = await getNewsFromDB(page, limit, status);
-    
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    };
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      status
+    });
+    return await apiRequest<PaginatedResponse<News>>(`/news?${params}`);
   } catch (error) {
     console.error('Error fetching news:', error);
     return {
@@ -157,7 +117,7 @@ export const getNews = async (page: number = 1, limit: number = 10, status: stri
 
 export const getNewsBySlug = async (slug: string): Promise<News | null> => {
   try {
-    return await getNewsBySlugFromDB(slug);
+    return await apiRequest<News>(`/news/${slug}`);
   } catch (error) {
     console.error('Error fetching news by slug:', error);
     return null;
@@ -166,13 +126,10 @@ export const getNewsBySlug = async (slug: string): Promise<News | null> => {
 
 export const createNews = async (newsData: Partial<News>): Promise<ApiResponse<News>> => {
   try {
-    const success = await createNewsInDB(newsData);
-    
-    if (success) {
-      return { success: true, message: 'News created successfully' };
-    } else {
-      return { success: false, message: 'Failed to create news' };
-    }
+    return await apiRequest<ApiResponse<News>>('/news', {
+      method: 'POST',
+      body: JSON.stringify(newsData),
+    });
   } catch (error) {
     console.error('Error creating news:', error);
     return { success: false, message: 'Failed to create news' };
@@ -181,13 +138,10 @@ export const createNews = async (newsData: Partial<News>): Promise<ApiResponse<N
 
 export const updateNews = async (id: number, newsData: Partial<News>): Promise<ApiResponse<News>> => {
   try {
-    const success = await updateNewsInDB(id, newsData);
-    
-    if (success) {
-      return { success: true, message: 'News updated successfully' };
-    } else {
-      return { success: false, message: 'Failed to update news' };
-    }
+    return await apiRequest<ApiResponse<News>>(`/news/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(newsData),
+    });
   } catch (error) {
     console.error('Error updating news:', error);
     return { success: false, message: 'Failed to update news' };
@@ -196,13 +150,9 @@ export const updateNews = async (id: number, newsData: Partial<News>): Promise<A
 
 export const deleteNews = async (id: number): Promise<ApiResponse<boolean>> => {
   try {
-    const success = await deleteNewsFromDB(id);
-    
-    if (success) {
-      return { success: true, message: 'News deleted successfully' };
-    } else {
-      return { success: false, message: 'Failed to delete news' };
-    }
+    return await apiRequest<ApiResponse<boolean>>(`/news/${id}`, {
+      method: 'DELETE',
+    });
   } catch (error) {
     console.error('Error deleting news:', error);
     return { success: false, message: 'Failed to delete news' };
@@ -221,13 +171,10 @@ export const getGalleries = async (kategori?: string): Promise<Gallery[]> => {
 
 export const createGallery = async (galleryData: Partial<Gallery>): Promise<ApiResponse<Gallery>> => {
   try {
-    const success = await createGalleryInDB(galleryData);
-    
-    if (success) {
-      return { success: true, message: 'Gallery item created successfully' };
-    } else {
-      return { success: false, message: 'Failed to create gallery item' };
-    }
+    return await apiRequest<ApiResponse<Gallery>>('/galleries', {
+      method: 'POST',
+      body: JSON.stringify(galleryData),
+    });
   } catch (error) {
     console.error('Error creating gallery:', error);
     return { success: false, message: 'Failed to create gallery item' };
@@ -237,7 +184,7 @@ export const createGallery = async (galleryData: Partial<Gallery>): Promise<ApiR
 // Events Service
 export const getEvents = async (): Promise<Event[]> => {
   try {
-    return await getEventsFromDB();
+    return await apiRequest<Event[]>('/events');
   } catch (error) {
     console.error('Error fetching events:', error);
     return [];
@@ -246,13 +193,10 @@ export const getEvents = async (): Promise<Event[]> => {
 
 export const createEvent = async (eventData: Partial<Event>): Promise<ApiResponse<Event>> => {
   try {
-    const success = await createEventInDB(eventData);
-    
-    if (success) {
-      return { success: true, message: 'Event created successfully' };
-    } else {
-      return { success: false, message: 'Failed to create event' };
-    }
+    return await apiRequest<ApiResponse<Event>>('/events', {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
   } catch (error) {
     console.error('Error creating event:', error);
     return { success: false, message: 'Failed to create event' };
@@ -262,7 +206,7 @@ export const createEvent = async (eventData: Partial<Event>): Promise<ApiRespons
 // Organization Service
 export const getOrganization = async (): Promise<Organization[]> => {
   try {
-    return await getOrganizationFromDB();
+    return await apiRequest<Organization[]>('/organization');
   } catch (error) {
     console.error('Error fetching organization:', error);
     return [];
@@ -271,13 +215,10 @@ export const getOrganization = async (): Promise<Organization[]> => {
 
 export const createOrganization = async (orgData: Partial<Organization>): Promise<ApiResponse<Organization>> => {
   try {
-    const success = await createOrganizationInDB(orgData);
-    
-    if (success) {
-      return { success: true, message: 'Organization member created successfully' };
-    } else {
-      return { success: false, message: 'Failed to create organization member' };
-    }
+    return await apiRequest<ApiResponse<Organization>>('/organization', {
+      method: 'POST',
+      body: JSON.stringify(orgData),
+    });
   } catch (error) {
     console.error('Error creating organization:', error);
     return { success: false, message: 'Failed to create organization member' };
@@ -287,7 +228,7 @@ export const createOrganization = async (orgData: Partial<Organization>): Promis
 // Services
 export const getServices = async (): Promise<Service[]> => {
   try {
-    return await getServicesFromDB();
+    return await apiRequest<Service[]>('/services');
   } catch (error) {
     console.error('Error fetching services:', error);
     return [];
@@ -296,13 +237,10 @@ export const getServices = async (): Promise<Service[]> => {
 
 export const createService = async (serviceData: Partial<Service>): Promise<ApiResponse<Service>> => {
   try {
-    const success = await createServiceInDB(serviceData);
-    
-    if (success) {
-      return { success: true, message: 'Service created successfully' };
-    } else {
-      return { success: false, message: 'Failed to create service' };
-    }
+    return await apiRequest<ApiResponse<Service>>('/services', {
+      method: 'POST',
+      body: JSON.stringify(serviceData),
+    });
   } catch (error) {
     console.error('Error creating service:', error);
     return { success: false, message: 'Failed to create service' };
@@ -312,17 +250,10 @@ export const createService = async (serviceData: Partial<Service>): Promise<ApiR
 // Service Submissions
 export const createServiceSubmission = async (submissionData: Partial<ServiceSubmission>): Promise<ApiResponse<ServiceSubmission>> => {
   try {
-    const submission = await createServiceSubmissionInDB(submissionData);
-    
-    if (submission) {
-      return {
-        success: true,
-        data: submission,
-        message: 'Pengajuan berhasil disubmit'
-      };
-    } else {
-      return { success: false, message: 'Failed to create service submission' };
-    }
+    return await apiRequest<ApiResponse<ServiceSubmission>>('/service-submissions', {
+      method: 'POST',
+      body: JSON.stringify(submissionData),
+    });
   } catch (error) {
     console.error('Error creating service submission:', error);
     return { success: false, message: 'Failed to create service submission' };
@@ -331,7 +262,7 @@ export const createServiceSubmission = async (submissionData: Partial<ServiceSub
 
 export const getServiceSubmissions = async (): Promise<ServiceSubmission[]> => {
   try {
-    return await getServiceSubmissionsFromDB();
+    return await apiRequest<ServiceSubmission[]>('/service-submissions');
   } catch (error) {
     console.error('Error fetching service submissions:', error);
     return [];
@@ -376,20 +307,6 @@ export const createDocument = async (documentData: Partial<Document>): Promise<A
 // Auth Service
 export const login = async (email: string, password: string): Promise<ApiResponse<{ admin: Admin; token: string }>> => {
   try {
-    // Try database login first
-    const admin = await loginFromDB(email, password);
-    
-    if (admin) {
-      const token = btoa(JSON.stringify({ id: admin.id, email: admin.email, timestamp: Date.now() }));
-      localStorage.setItem('auth_token', token);
-      
-      return {
-        success: true,
-        data: { admin, token },
-        message: 'Login berhasil'
-      };
-    }
-    
     // Fallback to demo login
     if (email === 'admin@desa.go.id' && password === 'admin123') {
       const demoAdmin: Admin = {
@@ -423,13 +340,10 @@ export const login = async (email: string, password: string): Promise<ApiRespons
 
 export const createAdmin = async (adminData: Partial<Admin>): Promise<ApiResponse<Admin>> => {
   try {
-    const success = await createAdminInDB(adminData);
-    
-    if (success) {
-      return { success: true, message: 'Admin created successfully' };
-    } else {
-      return { success: false, message: 'Failed to create admin' };
-    }
+    return await apiRequest<ApiResponse<Admin>>('/admin', {
+      method: 'POST',
+      body: JSON.stringify(adminData),
+    });
   } catch (error) {
     console.error('Error creating admin:', error);
     return { success: false, message: 'Failed to create admin' };
@@ -439,7 +353,7 @@ export const createAdmin = async (adminData: Partial<Admin>): Promise<ApiRespons
 // Statistics Service
 export const getStatistics = async () => {
   try {
-    return await getStatisticsFromDB();
+    return await apiRequest('/statistics');
   } catch (error) {
     console.error('Error fetching statistics:', error);
     return {
